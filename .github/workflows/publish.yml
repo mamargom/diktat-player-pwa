@@ -1,0 +1,102 @@
+name: Publicar Diktat Player PWA
+
+on:
+  push:
+    branches: [feature/standalone-app-v1]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar Diktat Player
+        env:
+          SOURCE: https://diktat-player-main-candidate.mario-martinez-gomez.chatgpt.site
+          FALLBACK: https://diktat-player-weltall.mario-martinez-gomez.chatgpt.site
+        run: |
+          mkdir -p site/assets/whisper
+          files=(
+            index.html manifest.webmanifest service-worker.js robots.txt favicon.ico
+            icon-180.png icon-192.png icon-512.png icon-maskable-512.png icon.svg
+            assets/framework-_cNvcSP9.js assets/index-CPQQ5Ah2.js
+            assets/ort-wasm-simd-threaded-DDx2apAW.wasm
+            assets/ort-wasm-simd-threaded.mjs assets/ort-wasm-simd-threaded.wasm
+            assets/ort.wasm.bundle.min-Bxag1mAh.js assets/piper-o91UDS6e-Bg8K-Nbs.js
+            assets/piper-tts-web-CfSr_hGN.js assets/piper_phonemize.data
+            assets/piper_phonemize.wasm assets/rolldown-runtime-DWdDZTNf.js
+            assets/voices_static-D_OtJDHM-fcs7f6Zg.js
+            assets/whisper/LICENSE-transformers.txt
+            assets/whisper/ort-wasm-simd-threaded.asyncify.mjs
+            assets/whisper/ort-wasm-simd-threaded.asyncify.wasm
+            assets/whisper/ort.webgpu.bundle.min.mjs
+            assets/whisper/transformers.web.min.js
+          )
+          for file in "${files[@]}"; do
+            mkdir -p "site/$(dirname "$file")"
+            curl --fail --location --retry 6 --retry-all-errors "$SOURCE/$file" -o "site/$file" || \
+              curl --fail --location --retry 6 --retry-all-errors "$FALLBACK/$file" -o "site/$file"
+          done
+          touch site/.nojekyll
+
+      - name: Adaptar a la ruta de GitHub Pages
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path("site")
+          html_path = root / "index.html"
+          html = html_path.read_text()
+          replacements = {
+              'href="/manifest.webmanifest"': 'href="./manifest.webmanifest"',
+              'href="/favicon.ico"': 'href="./favicon.ico"',
+              'href="/icon-192.png"': 'href="./icon-192.png"',
+              'href="/icon-180.png"': 'href="./icon-180.png"',
+              '"/assets/whisper/ort.webgpu.bundle.min.mjs"': '"./assets/whisper/ort.webgpu.bundle.min.mjs"',
+              "register('/service-worker.js',{scope:'/'})": "register('./service-worker.js',{scope:'./'})",
+              "import('/assets/piper-tts-web-CfSr_hGN.js')": "import('./assets/piper-tts-web-CfSr_hGN.js')",
+              "import('/assets/whisper/transformers.web.min.js')": "import('./assets/whisper/transformers.web.min.js')",
+              "const path='/generated/'+encodeURIComponent(name)": "const path=new URL('./generated/'+encodeURIComponent(name),document.baseURI).pathname",
+              "mjs:'/assets/whisper/ort-wasm-simd-threaded.asyncify.mjs'": "mjs:'./assets/whisper/ort-wasm-simd-threaded.asyncify.mjs'",
+              "wasm:'/assets/whisper/ort-wasm-simd-threaded.asyncify.wasm'": "wasm:'./assets/whisper/ort-wasm-simd-threaded.asyncify.wasm'",
+              "onnxWasm:'/assets/'": "onnxWasm:'./assets/'",
+              "piperData:'/assets/piper_phonemize.data'": "piperData:'./assets/piper_phonemize.data'",
+              "piperWasm:'/assets/piper_phonemize.wasm'": "piperWasm:'./assets/piper_phonemize.wasm'",
+          }
+          for before, after in replacements.items():
+              html = html.replace(before, after)
+          html_path.write_text(html)
+
+          manifest_path = root / "manifest.webmanifest"
+          manifest = json.loads(manifest_path.read_text())
+          manifest.update(id="./", start_url="./", scope="./")
+          for icon in manifest.get("icons", []):
+              icon["src"] = "./" + icon["src"].lstrip("./")
+          manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n")
+
+          worker_path = root / "service-worker.js"
+          worker = worker_path.read_text()
+          worker = worker.replace('const OFFLINE_PAGE = "/index.html";', 'const APP_SCOPE = self.registration.scope;\nconst OFFLINE_PAGE = new URL("index.html", APP_SCOPE).href;\nconst GENERATED_PATH = new URL("generated/", APP_SCOPE).pathname;')
+          worker = worker.replace('url.pathname.startsWith("/generated/")', 'url.pathname.startsWith(GENERATED_PATH)')
+          worker_path.write_text(worker)
+          PY
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - name: Publicar
+        id: deployment
+        uses: actions/deploy-pages@v4
