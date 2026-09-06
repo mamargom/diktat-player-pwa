@@ -69,11 +69,11 @@ jobs:
               "import('/assets/piper-tts-web-CfSr_hGN.js')": "import('./assets/piper-tts-web-CfSr_hGN.js')",
               "import('/assets/whisper/transformers.web.min.js')": "import('./assets/whisper/transformers.web.min.js')",
               "const path='/generated/'+encodeURIComponent(name)": "const path=new URL('./generated/'+encodeURIComponent(name),document.baseURI).pathname",
-              "mjs:'/assets/whisper/ort-wasm-simd-threaded.asyncify.mjs'": "mjs:'./assets/whisper/ort-wasm-simd-threaded.asyncify.mjs'",
-              "wasm:'/assets/whisper/ort-wasm-simd-threaded.asyncify.wasm'": "wasm:'./assets/whisper/ort-wasm-simd-threaded.asyncify.wasm'",
-              "onnxWasm:'/assets/'": "onnxWasm:'./assets/'",
-              "piperData:'/assets/piper_phonemize.data'": "piperData:'./assets/piper_phonemize.data'",
-              "piperWasm:'/assets/piper_phonemize.wasm'": "piperWasm:'./assets/piper_phonemize.wasm'",
+              "mjs:'/assets/whisper/ort-wasm-simd-threaded.asyncify.mjs'": "mjs:new URL('./assets/whisper/ort-wasm-simd-threaded.asyncify.mjs',document.baseURI).href",
+              "wasm:'/assets/whisper/ort-wasm-simd-threaded.asyncify.wasm'": "wasm:new URL('./assets/whisper/ort-wasm-simd-threaded.asyncify.wasm',document.baseURI).href",
+              "onnxWasm:'/assets/'": "onnxWasm:new URL('./assets/',document.baseURI).href",
+              "piperData:'/assets/piper_phonemize.data'": "piperData:new URL('./assets/piper_phonemize.data',document.baseURI).href",
+              "piperWasm:'/assets/piper_phonemize.wasm'": "piperWasm:new URL('./assets/piper_phonemize.wasm',document.baseURI).href",
           }
           for before, after in replacements.items():
               html = html.replace(before, after)
