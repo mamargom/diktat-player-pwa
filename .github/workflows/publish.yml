@@ -1,5 +1,4 @@
-# Publicar versión 19
-name: Publicar Diktat Player PWA
+name: Migrar Diktat Player completamente a GitHub
 
 on:
   push:
@@ -7,22 +6,23 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
-  group: pages
-  cancel-in-progress: true
+  group: github-native-migration
+  cancel-in-progress: false
 
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  migrate:
     runs-on: ubuntu-latest
     steps:
-      - name: Descargar Diktat Player
+      - name: Preparar repositorio
+        uses: actions/checkout@v4
+        with:
+          ref: feature/standalone-app-v1
+          fetch-depth: 0
+
+      - name: Descargar la Versión 19 estable
         env:
           SOURCE: https://diktat-player-main-candidate.mario-martinez-gomez.chatgpt.site
           FALLBACK: https://diktat-player-weltall.mario-martinez-gomez.chatgpt.site
@@ -51,7 +51,7 @@ jobs:
           done
           touch site/.nojekyll
 
-      - name: Adaptar a la ruta de GitHub Pages
+      - name: Adaptar la aplicación a GitHub Pages
         run: |
           python3 - <<'PY'
           import json
@@ -69,7 +69,6 @@ jobs:
               "register('/service-worker.js',{scope:'/'})": "register('./service-worker.js',{scope:'./'})",
               "import('/assets/piper-tts-web-CfSr_hGN.js')": "import('./assets/piper-tts-web-CfSr_hGN.js')",
               "import('/assets/whisper/transformers.web.min.js')": "import('./assets/whisper/transformers.web.min.js')",
-              "const path='/generated/'+encodeURIComponent(name)": "const path=new URL('./generated/'+encodeURIComponent(name),document.baseURI).pathname",
               "mjs:'/assets/whisper/ort-wasm-simd-threaded.asyncify.mjs'": "mjs:new URL('./assets/whisper/ort-wasm-simd-threaded.asyncify.mjs',document.baseURI).href",
               "wasm:'/assets/whisper/ort-wasm-simd-threaded.asyncify.wasm'": "wasm:new URL('./assets/whisper/ort-wasm-simd-threaded.asyncify.wasm',document.baseURI).href",
               "onnxWasm:'/assets/'": "onnxWasm:new URL('./assets/',document.baseURI).href",
@@ -94,12 +93,24 @@ jobs:
           worker_path.write_text(worker)
           PY
 
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: site
-      - name: Publicar
-        id: deployment
-        uses: actions/deploy-pages@v4
-
-# Conector de GitHub verificado
+      - name: Crear rama autónoma y conservar V19
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -C migration/github-native-v20
+          cp -a site/. .
+          rm -rf stable-v19
+          mkdir stable-v19
+          cp -a site/. stable-v19/
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+          html = Path("index.html")
+          html.write_text(html.read_text().replace("Versión 19 · PWA standalone", "Versión 20 · GitHub standalone"))
+          worker = Path("service-worker.js")
+          worker.write_text(re.sub(r'diktat-player-standalone-v\\d+', 'diktat-player-standalone-v21', worker.read_text(), count=1))
+          PY
+          rm -rf site
+          git add -A
+          git commit -m "Migrar aplicación completa a GitHub y preservar V19"
+          git push --force-with-lease origin HEAD:refs/heads/migration/github-native-v20
