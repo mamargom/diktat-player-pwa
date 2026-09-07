@@ -1,4 +1,4 @@
-name: Migrar Diktat Player completamente a GitHub
+name: Publicar Diktat Player desde GitHub
 
 on:
   push:
@@ -6,111 +6,51 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
 
 concurrency:
-  group: github-native-migration
-  cancel-in-progress: false
+  group: pages
+  cancel-in-progress: true
 
 jobs:
-  migrate:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - name: Preparar repositorio
+      - name: Descargar repositorio
         uses: actions/checkout@v4
+
+      - name: Verificar aplicación autónoma
+        run: |
+          test -f index.html
+          test -f manifest.webmanifest
+          test -f service-worker.js
+          test -f stable-v19/index.html
+          test -f assets/piper_phonemize.wasm
+          test -f assets/whisper/ort-wasm-simd-threaded.asyncify.wasm
+          test "$(find assets -type f | wc -l)" -eq 17
+          grep -q "Versión 20 · GitHub standalone" index.html
+          grep -q "Versión 19 · PWA standalone" stable-v19/index.html
+          if grep -q "chatgpt.site" index.html service-worker.js manifest.webmanifest; then
+            echo "La aplicación principal todavía depende de Sites"
+            exit 1
+          fi
+
+      - name: Preparar publicación
+        run: |
+          mkdir site
+          cp -a .nojekyll index.html manifest.webmanifest service-worker.js robots.txt favicon.ico site/
+          cp -a icon-180.png icon-192.png icon-512.png icon-maskable-512.png icon.svg site/
+          cp -a assets stable-v19 site/
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
         with:
-          ref: feature/standalone-app-v1
-          fetch-depth: 0
-
-      - name: Descargar la Versión 19 estable
-        env:
-          SOURCE: https://diktat-player-main-candidate.mario-martinez-gomez.chatgpt.site
-          FALLBACK: https://diktat-player-weltall.mario-martinez-gomez.chatgpt.site
-        run: |
-          mkdir -p site/assets/whisper
-          files=(
-            index.html manifest.webmanifest service-worker.js robots.txt favicon.ico
-            icon-180.png icon-192.png icon-512.png icon-maskable-512.png icon.svg
-            assets/framework-_cNvcSP9.js assets/index-CPQQ5Ah2.js
-            assets/ort-wasm-simd-threaded-DDx2apAW.wasm
-            assets/ort-wasm-simd-threaded.mjs assets/ort-wasm-simd-threaded.wasm
-            assets/ort.wasm.bundle.min-Bxag1mAh.js assets/piper-o91UDS6e-Bg8K-Nbs.js
-            assets/piper-tts-web-CfSr_hGN.js assets/piper_phonemize.data
-            assets/piper_phonemize.wasm assets/rolldown-runtime-DWdDZTNf.js
-            assets/voices_static-D_OtJDHM-fcs7f6Zg.js
-            assets/whisper/LICENSE-transformers.txt
-            assets/whisper/ort-wasm-simd-threaded.asyncify.mjs
-            assets/whisper/ort-wasm-simd-threaded.asyncify.wasm
-            assets/whisper/ort.webgpu.bundle.min.mjs
-            assets/whisper/transformers.web.min.js
-          )
-          for file in "${files[@]}"; do
-            mkdir -p "site/$(dirname "$file")"
-            curl --fail --location --retry 6 --retry-all-errors "$SOURCE/$file" -o "site/$file" || \
-              curl --fail --location --retry 6 --retry-all-errors "$FALLBACK/$file" -o "site/$file"
-          done
-          touch site/.nojekyll
-
-      - name: Adaptar la aplicación a GitHub Pages
-        run: |
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
-
-          root = Path("site")
-          html_path = root / "index.html"
-          html = html_path.read_text()
-          replacements = {
-              'href="/manifest.webmanifest"': 'href="./manifest.webmanifest"',
-              'href="/favicon.ico"': 'href="./favicon.ico"',
-              'href="/icon-192.png"': 'href="./icon-192.png"',
-              'href="/icon-180.png"': 'href="./icon-180.png"',
-              '"/assets/whisper/ort.webgpu.bundle.min.mjs"': '"./assets/whisper/ort.webgpu.bundle.min.mjs"',
-              "register('/service-worker.js',{scope:'/'})": "register('./service-worker.js',{scope:'./'})",
-              "import('/assets/piper-tts-web-CfSr_hGN.js')": "import('./assets/piper-tts-web-CfSr_hGN.js')",
-              "import('/assets/whisper/transformers.web.min.js')": "import('./assets/whisper/transformers.web.min.js')",
-              "mjs:'/assets/whisper/ort-wasm-simd-threaded.asyncify.mjs'": "mjs:new URL('./assets/whisper/ort-wasm-simd-threaded.asyncify.mjs',document.baseURI).href",
-              "wasm:'/assets/whisper/ort-wasm-simd-threaded.asyncify.wasm'": "wasm:new URL('./assets/whisper/ort-wasm-simd-threaded.asyncify.wasm',document.baseURI).href",
-              "onnxWasm:'/assets/'": "onnxWasm:new URL('./assets/',document.baseURI).href",
-              "piperData:'/assets/piper_phonemize.data'": "piperData:new URL('./assets/piper_phonemize.data',document.baseURI).href",
-              "piperWasm:'/assets/piper_phonemize.wasm'": "piperWasm:new URL('./assets/piper_phonemize.wasm',document.baseURI).href",
-          }
-          for before, after in replacements.items():
-              html = html.replace(before, after)
-          html_path.write_text(html)
-
-          manifest_path = root / "manifest.webmanifest"
-          manifest = json.loads(manifest_path.read_text())
-          manifest.update(id="./", start_url="./", scope="./")
-          for icon in manifest.get("icons", []):
-              icon["src"] = "./" + icon["src"].lstrip("./")
-          manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n")
-
-          worker_path = root / "service-worker.js"
-          worker = worker_path.read_text()
-          worker = worker.replace('const OFFLINE_PAGE = "/index.html";', 'const APP_SCOPE = self.registration.scope;\nconst OFFLINE_PAGE = new URL("index.html", APP_SCOPE).href;\nconst GENERATED_PATH = new URL("generated/", APP_SCOPE).pathname;')
-          worker = worker.replace('url.pathname.startsWith("/generated/")', 'url.pathname.startsWith(GENERATED_PATH)')
-          worker_path.write_text(worker)
-          PY
-
-      - name: Crear rama autónoma y conservar V19
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git switch -C migration/github-native-v20
-          cp -a site/. .
-          rm -rf stable-v19
-          mkdir stable-v19
-          cp -a site/. stable-v19/
-          python3 - <<'PY'
-          import re
-          from pathlib import Path
-          html = Path("index.html")
-          html.write_text(html.read_text().replace("Versión 19 · PWA standalone", "Versión 20 · GitHub standalone"))
-          worker = Path("service-worker.js")
-          worker.write_text(re.sub(r'diktat-player-standalone-v\\d+', 'diktat-player-standalone-v21', worker.read_text(), count=1))
-          PY
-          rm -rf site
-          git add -A
-          git commit -m "Migrar aplicación completa a GitHub y preservar V19"
-          git push --force-with-lease origin HEAD:refs/heads/migration/github-native-v20
+          path: site
+      - name: Publicar
+        id: deployment
+        uses: actions/deploy-pages@v4
