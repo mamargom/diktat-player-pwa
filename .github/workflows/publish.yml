@@ -2,7 +2,7 @@ name: Publicar Diktat Player desde GitHub
 
 on:
   push:
-    branches: [fix/android-download-filenames-v21]
+    branches: [feature/standalone-app-v1]
   workflow_dispatch:
 
 permissions:
