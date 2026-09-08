@@ -1,4 +1,4 @@
-const CACHE = "diktat-player-standalone-v23-filename";
+const CACHE = "diktat-player-standalone-v24-editable-name";
 const GENERATED_CACHE = "diktat-generated-files";
 const APP_SCOPE = self.registration.scope;
 const OFFLINE_PAGE = new URL("index.html", APP_SCOPE).href;
