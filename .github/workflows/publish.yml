@@ -2,7 +2,7 @@ name: Publicar Diktat Player desde GitHub
 
 on:
   push:
-    branches: [feature/standalone-app-v1]
+    branches: [fix/android-download-filenames-v21]
   workflow_dispatch:
 
 permissions:
@@ -33,7 +33,7 @@ jobs:
           test -f assets/piper_phonemize.wasm
           test -f assets/whisper/ort-wasm-simd-threaded.asyncify.wasm
           test "$(find assets -type f | wc -l)" -eq 17
-          grep -q "Versión 20 · GitHub standalone" index.html
+          grep -q "Versión 21 · nombres Android corregidos" index.html
           grep -q "Versión 19 · PWA standalone" stable-v19/index.html
           if grep -q "chatgpt.site" index.html service-worker.js manifest.webmanifest; then
             echo "La aplicación principal todavía depende de Sites"
