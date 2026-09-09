@@ -1,5 +1,5 @@
-const CACHE = "diktat-player-standalone-v30-clean-state";
-const GENERATED_CACHE = "diktat-generated-files";
+const CACHE = "diktat-player-ocr-v4";
+const GENERATED_CACHE = "diktat-generated-files-ocr";
 const APP_SCOPE = self.registration.scope;
 const OFFLINE_PAGE = new URL("index.html", APP_SCOPE).href;
 const GENERATED_PATH = new URL("generated/", APP_SCOPE).pathname;
@@ -18,7 +18,7 @@ self.addEventListener("install", event => {
 self.addEventListener("activate", event => {
   event.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(key => key.startsWith("diktat-player-") && key !== CACHE && key !== GENERATED_CACHE).map(key => caches.delete(key))))
+      .then(keys => Promise.all(keys.filter(key => key.startsWith("diktat-player-ocr-") && key !== CACHE && key !== GENERATED_CACHE).map(key => caches.delete(key))))
       .then(() => self.clients.claim())
   );
 });
