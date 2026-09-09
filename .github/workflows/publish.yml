@@ -53,7 +53,7 @@ jobs:
           test -f sources/ocr/index.html
           test -f sources/ocr/service-worker.js
           test -f sources/local-package/index.html
-          grep -q "Versión 33\|Versión 36" sources/main/index.html
+          grep -q "Main · Versión" sources/main/index.html
           grep -q "Feature OCR" sources/ocr/index.html
           grep -q "Feature Local Package" sources/local-package/index.html
 
