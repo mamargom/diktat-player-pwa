@@ -1,8 +1,11 @@
-name: Publicar Diktat Player desde GitHub
+name: Publicar Diktat Player multibranch
 
 on:
   push:
-    branches: [feature/standalone-app-v1]
+    branches:
+      - main
+      - feature/ocr
+      - feature/local-package
   workflow_dispatch:
 
 permissions:
@@ -11,7 +14,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
+  group: pages-multibranch
   cancel-in-progress: true
 
 jobs:
@@ -21,40 +24,46 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - name: Descargar repositorio
+      - name: Descargar main
         uses: actions/checkout@v4
+        with:
+          ref: main
+          path: sources/main
 
-      - name: Verificar aplicación autónoma
+      - name: Descargar feature OCR
+        uses: actions/checkout@v4
+        with:
+          ref: feature/ocr
+          path: sources/ocr
+
+      - name: Descargar feature local-package
+        uses: actions/checkout@v4
+        with:
+          ref: feature/local-package
+          path: sources/local-package
+
+      - name: Verificar versiones
         run: |
-          test -f index.html
-          test -f manifest.webmanifest
-          test -f service-worker.js
-          test -f stable-v19/index.html
-          test -f assets/piper_phonemize.wasm
-          test -f assets/whisper/ort-wasm-simd-threaded.asyncify.wasm
-          test "$(find assets -type f | wc -l)" -eq 17
-          grep -q "Versión 30 · cambio limpio de voz y texto" index.html
-          grep -q "Versión 19 · PWA standalone" stable-v19/index.html
-          grep -q "Versión 22 · descarga Android corregida" stable-v22/index.html
-          grep -q "Versión 27 · alemán y español" stable-v27/index.html
-          grep -q "Versión 28 · interfaz ES/DE" stable-v28/index.html
-          grep -q "Versión 29 · interfaz completa ES/DE" stable-v29/index.html
-          if grep -q "chatgpt.site" index.html service-worker.js manifest.webmanifest; then
-            echo "La aplicación principal todavía depende de Sites"
-            exit 1
-          fi
+          test -f sources/main/index.html
+          test -f sources/main/service-worker.js
+          test -f sources/ocr/index.html
+          test -f sources/ocr/service-worker.js
+          test -f sources/local-package/index.html
+          grep -q "Versión 30\|Versión 33" sources/main/index.html
+          grep -q "Feature OCR" sources/ocr/index.html
 
       - name: Preparar publicación
         run: |
-          mkdir site
-          cp -a .nojekyll index.html manifest.webmanifest service-worker.js robots.txt favicon.ico site/
-          cp -a icon-180.png icon-192.png icon-512.png icon-maskable-512.png icon.svg site/
-          cp -a assets stable-v19 stable-v22 stable-v27 stable-v28 stable-v29 site/
+          mkdir -p site/features/ocr site/features/local-package
+          rsync -a --exclude='.git' --exclude='.github' sources/main/ site/
+          rsync -a --exclude='.git' --exclude='.github' sources/ocr/ site/features/ocr/
+          rsync -a --exclude='.git' --exclude='.github' sources/local-package/ site/features/local-package/
 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site
+
       - name: Publicar
         id: deployment
         uses: actions/deploy-pages@v4
