@@ -1,4 +1,4 @@
-const CACHE = "diktat-player-standalone-v28-interface-language";
+const CACHE = "diktat-player-standalone-v28-interface-hotfix";
 const GENERATED_CACHE = "diktat-generated-files";
 const APP_SCOPE = self.registration.scope;
 const OFFLINE_PAGE = new URL("index.html", APP_SCOPE).href;
