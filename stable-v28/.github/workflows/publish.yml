@@ -1,0 +1,58 @@
+name: Publicar Diktat Player desde GitHub
+
+on:
+  push:
+    branches: [feature/standalone-app-v1]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Verificar aplicación autónoma
+        run: |
+          test -f index.html
+          test -f manifest.webmanifest
+          test -f service-worker.js
+          test -f stable-v19/index.html
+          test -f assets/piper_phonemize.wasm
+          test -f assets/whisper/ort-wasm-simd-threaded.asyncify.wasm
+          test "$(find assets -type f | wc -l)" -eq 17
+          grep -q "Versión 28 · interfaz ES/DE" index.html
+          grep -q "Versión 19 · PWA standalone" stable-v19/index.html
+          grep -q "Versión 22 · descarga Android corregida" stable-v22/index.html
+          grep -q "Versión 27 · alemán y español" stable-v27/index.html
+          if grep -q "chatgpt.site" index.html service-worker.js manifest.webmanifest; then
+            echo "La aplicación principal todavía depende de Sites"
+            exit 1
+          fi
+
+      - name: Preparar publicación
+        run: |
+          mkdir site
+          cp -a .nojekyll index.html manifest.webmanifest service-worker.js robots.txt favicon.ico site/
+          cp -a icon-180.png icon-192.png icon-512.png icon-maskable-512.png icon.svg site/
+          cp -a assets stable-v19 stable-v22 stable-v27 site/
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - name: Publicar
+        id: deployment
+        uses: actions/deploy-pages@v4
