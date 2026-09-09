@@ -4,8 +4,11 @@ on:
   push:
     branches:
       - main
-      - feature/ocr
-      - feature/local-package
+  workflow_run:
+    workflows:
+      - Detectar cambio de feature
+    types:
+      - completed
   workflow_dispatch:
 
 permissions:
@@ -19,6 +22,7 @@ concurrency:
 
 jobs:
   deploy:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -49,8 +53,9 @@ jobs:
           test -f sources/ocr/index.html
           test -f sources/ocr/service-worker.js
           test -f sources/local-package/index.html
-          grep -q "Versión 30\|Versión 33" sources/main/index.html
+          grep -q "Versión 33\|Versión 36" sources/main/index.html
           grep -q "Feature OCR" sources/ocr/index.html
+          grep -q "Feature Local Package" sources/local-package/index.html
 
       - name: Preparar publicación
         run: |
