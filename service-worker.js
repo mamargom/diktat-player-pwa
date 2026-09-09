@@ -1,8 +1,9 @@
-const CACHE = "diktat-player-standalone-v30-clean-state";
-const GENERATED_CACHE = "diktat-generated-files";
+const CACHE = "diktat-player-main-v33-multibranch";
+const GENERATED_CACHE = "diktat-generated-files-main";
 const APP_SCOPE = self.registration.scope;
 const OFFLINE_PAGE = new URL("index.html", APP_SCOPE).href;
 const GENERATED_PATH = new URL("generated/", APP_SCOPE).pathname;
+const FEATURES_PATH = new URL("features/", APP_SCOPE).pathname;
 
 self.addEventListener("install", event => {
   event.waitUntil(
@@ -18,7 +19,7 @@ self.addEventListener("install", event => {
 self.addEventListener("activate", event => {
   event.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(key => key.startsWith("diktat-player-") && key !== CACHE && key !== GENERATED_CACHE).map(key => caches.delete(key))))
+      .then(keys => Promise.all(keys.filter(key => (key.startsWith("diktat-player-main-") || key.startsWith("diktat-player-standalone-")) && key !== CACHE && key !== GENERATED_CACHE).map(key => caches.delete(key))))
       .then(() => self.clients.claim())
   );
 });
@@ -27,6 +28,8 @@ self.addEventListener("fetch", event => {
   const request = event.request;
   if (request.method !== "GET") return;
   const url = new URL(request.url);
+
+  if (url.origin === self.location.origin && url.pathname.startsWith(FEATURES_PATH)) return;
 
   if (url.origin === self.location.origin && url.pathname.startsWith(GENERATED_PATH)) {
     event.respondWith(caches.open(GENERATED_CACHE).then(cache => cache.match(request)).then(hit => hit || new Response("Archivo no disponible", { status: 404 })));
