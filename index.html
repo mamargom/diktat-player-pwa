@@ -70,7 +70,6 @@
  const translateInterface=()=>{translatingInterface=true;const walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);while(walker.nextNode())translateInterfaceNode(walker.currentNode);interfaceEs.classList.toggle('active',interfaceLanguage==='es');interfaceDe.classList.toggle('active',interfaceLanguage==='de');interfaceLanguageToggle.setAttribute('aria-label',interfaceLanguage==='es'?'Cambiar interfaz a alemán':'Oberfläche auf Spanisch umstellen');document.documentElement.lang=interfaceLanguage;try{localStorage.setItem('diktat-interface-language',interfaceLanguage)}catch{}translatingInterface=false};
  try{if(localStorage.getItem('diktat-interface-language')==='de')interfaceLanguage='de'}catch{}
  interfaceLanguageToggle.addEventListener('click',()=>{interfaceLanguage=interfaceLanguage==='es'?'de':'es';translateInterface()});
- new MutationObserver(records=>{if(translatingInterface)return;for(const record of records){if(record.type==='characterData')translateInterfaceNode(record.target);for(const node of record.addedNodes){if(node.nodeType===Node.TEXT_NODE)translateInterfaceNode(node)}}}).observe(document.body,{subtree:true,childList:true,characterData:true});
  translateInterface();
  const languages={de:{voiceId:'de_DE-thorsten-medium',voiceName:'Thorsten',languageName:'alemán',whisperLanguage:'german',placeholder:'Escribe o pega aquí el texto en alemán…'},es:{voiceId:'es_ES-davefx-medium',voiceName:'Dave',languageName:'español',whisperLanguage:'spanish',placeholder:'Escribe o pega aquí el texto en español…'}};
  const selectedLanguage=()=>languages[dictationLanguage.value]||languages.de;
@@ -78,6 +77,7 @@
  try{const savedLanguage=localStorage.getItem('diktat-language');if(languages[savedLanguage])dictationLanguage.value=savedLanguage}catch{}
  dictationLanguage.addEventListener('change',()=>applyLanguage(true));
  applyLanguage(false);
+ if(interfaceLanguage==='de')translateInterface();
  let piperTtsPromise=null,transformersJsPromise=null,onlineTaskBusy=false;
  const loadPiper=()=>piperTtsPromise||(piperTtsPromise=import('./assets/piper-tts-web-CfSr_hGN.js').catch(error=>{piperTtsPromise=null;throw error}));
  const loadTransformers=()=>transformersJsPromise||(transformersJsPromise=import('./assets/whisper/transformers.web.min.js').catch(error=>{transformersJsPromise=null;throw error}));
