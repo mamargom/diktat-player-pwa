@@ -1,0 +1,10 @@
+{
+  "name": "diktat-player-local-package",
+  "private": true,
+  "scripts": {
+    "package:local": "node scripts/build-local-package.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  }
+}
