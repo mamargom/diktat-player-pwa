@@ -1,4 +1,4 @@
-name: Publicar prueba de pausas 44.1
+name: Publicar Diktat Player estable
 
 on:
   push:
@@ -22,25 +22,23 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - name: Descargar feature de pausas
+      - name: Descargar main
         uses: actions/checkout@v4
-        with:
-          ref: feature/comma-pauses-v44
 
-      - name: Verificar feature de pausas
+      - name: Verificar versión estable
         run: |
           test -f index.html
           test -f manifest.webmanifest
           test -f service-worker.js
           test -f assets/piper_phonemize.wasm
           test -f assets/whisper/ort-wasm-simd-threaded.asyncify.wasm
-          grep -q "Feature pausas · Versión 44.1" index.html
+          grep -q "Main · Versión 44.1 · pausas mejoradas" index.html
           if grep -q "chatgpt.site" index.html service-worker.js manifest.webmanifest; then
             echo "La aplicación principal todavía depende de Sites"
             exit 1
           fi
 
-      - name: Preparar publicación de prueba
+      - name: Preparar publicación estable
         run: |
           mkdir site
           cp -a .nojekyll index.html manifest.webmanifest service-worker.js robots.txt favicon.ico site/
