@@ -172,7 +172,7 @@
  let generatedUrl=null,generationId=0,cancelRequested=false;
  const resetGeneratedOutput=()=>{generatedFile.hidden=true;generatedAudio.pause();generatedAudio.removeAttribute('src');generatedAudio.load();if(generatedUrl){URL.revokeObjectURL(generatedUrl);generatedUrl=null}generatedName.textContent='Dictado.wav';generatedName.removeAttribute('title');downloadWav.href='#';downloadWav.download='Dictado.wav';downloadWav.onclick=null};
  const splitSentences=text=>(text.match(/[^.!?]+(?:[.!?]+|$)/g)||[]).map(x=>x.trim()).filter(Boolean);
- const enhanceSpeechPauses=text=>text.replace(/,\s+/g,',; ').replace(/;\s+/g,'; ').replace(/:\s+/g,':; ');
+ const enhanceSpeechPauses=text=>text.replace(/,\s*/g,'; ').replace(/:\s*/g,'; ');
  const splitForSpeech=text=>{const paragraphs=text.trim().split(/\n\s*\n/).map(x=>x.trim()).filter(Boolean),items=[];let sentenceIndex=0;paragraphs.forEach((paragraph,p)=>{const sentences=splitSentences(paragraph.replace(/\s*\n\s*/g,' '));sentences.forEach((sentence,s)=>{const paragraphEnd=s===sentences.length-1,pauseAfter=paragraphEnd&&p<paragraphs.length-1?2:1;items.push({text:sentence,speechText:enhanceSpeechPauses(sentence),pauseAfter,sentenceIndex:sentenceIndex++})})});if(items.length)items[items.length-1].pauseAfter=0;return items};
  const shortTitle=text=>{const title=text.replace(/[.!?]+$/,'').trim().split(/\s+/).slice(0,4).join(' ');return title.length>28?title.slice(0,25).trim()+'…':title||'Dictado'};
  const safeName=text=>{const words=text.replace(/[.!?]+$/,'').trim().split(/\s+/).slice(0,4).join(' '),short=words.length>28?words.slice(0,28).trim():words,ascii=short.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ß/g,'ss').replace(/[^A-Za-z0-9 _.-]+/g,'').trim();return(ascii||'Dictado')+'.wav'};
