@@ -1,4 +1,4 @@
-const CACHE = "diktat-player-spoken-punctuation-v45-1";
+const CACHE = "diktat-player-spoken-punctuation-v45-2";
 const GENERATED_CACHE = "diktat-generated-files";
 const APP_SCOPE = self.registration.scope;
 const OFFLINE_PAGE = new URL("index.html", APP_SCOPE).href;
