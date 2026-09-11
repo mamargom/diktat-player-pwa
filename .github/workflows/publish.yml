@@ -1,4 +1,4 @@
-name: Publicar prueba de puntuación hablada v45
+name: Publicar prueba de puntuación hablada v45.1
 
 on:
   push:
@@ -34,7 +34,7 @@ jobs:
           test -f service-worker.js
           test -f assets/piper_phonemize.wasm
           test -f assets/whisper/ort-wasm-simd-threaded.asyncify.wasm
-          grep -q "Feature puntuación hablada · Versión 45" index.html
+          grep -q "Feature puntuación hablada · Versión 45.1" index.html
           if grep -q "chatgpt.site" index.html service-worker.js manifest.webmanifest; then
             echo "La aplicación principal todavía depende de Sites"
             exit 1
